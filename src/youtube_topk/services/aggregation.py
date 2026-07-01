@@ -38,9 +38,7 @@ async def aggregate_window(
     """Aggregate view events for a time window into window_aggregates.
 
     Uses UPSERT (ON CONFLICT DO UPDATE) so re-running is idempotent.
-    Works across PostgreSQL and SQLite dialects.
     """
-    # Count events per video_id in the window
     count_stmt = (
         select(
             ViewEvent.video_id,
@@ -56,21 +54,19 @@ async def aggregate_window(
     counts = result.fetchall()
 
     for video_id, view_count in counts:
-        # Normalize video_id: on SQLite it's a string (hex), on PG it's a UUID
-        vid_str = video_id.hex if hasattr(video_id, "hex") else str(video_id)
         upsert_stmt = text(
             """
             INSERT INTO window_aggregates (video_id, window_start, window_end, view_count)
             VALUES (:video_id, :window_start, :window_end, :view_count)
             ON CONFLICT (video_id, window_start) DO UPDATE
-            SET view_count = window_aggregates.view_count + :view_count,
+            SET view_count = :view_count,
                 window_end = :window_end
             """
         )
         await db.execute(
             upsert_stmt,
             {
-                "video_id": vid_str,
+                "video_id": video_id.hex,
                 "window_start": window_start,
                 "window_end": window_end,
                 "view_count": view_count,
@@ -82,24 +78,26 @@ async def get_top_k(
     db: AsyncSession, window_start: datetime, window_end: datetime, k: int
 ) -> list[dict]:
     """Return the top-K videos by view count for a given window."""
-    stmt = (
-        select(
-            WindowAggregate.video_id,
-            Video.title,
-            WindowAggregate.view_count,
-        )
-        .join(Video, Video.video_id == WindowAggregate.video_id)
-        .where(
-            WindowAggregate.window_start == window_start,
-            WindowAggregate.window_end == window_end,
-        )
-        .order_by(WindowAggregate.view_count.desc())
-        .limit(k)
+    stmt = text(
+        """
+        SELECT wa.video_id, v.title, wa.view_count
+        FROM window_aggregates wa
+        JOIN videos v ON v.video_id = wa.video_id
+        WHERE wa.window_start = :window_start AND wa.window_end = :window_end
+        ORDER BY wa.view_count DESC
+        LIMIT :k
+        """
     )
-    result = await db.execute(stmt)
+    result = await db.execute(
+        stmt, {"window_start": window_start, "window_end": window_end, "k": k}
+    )
     rows = result.fetchall()
     return [
-        {"video_id": row[0], "title": row[1], "view_count": row[2]}
+        {
+            "video_id": uuid.UUID(row[0]) if isinstance(row[0], str) else row[0],
+            "title": row[1],
+            "view_count": row[2],
+        }
         for row in rows
     ]
 

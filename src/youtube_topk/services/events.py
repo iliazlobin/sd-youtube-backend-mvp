@@ -1,6 +1,5 @@
 """View event ingestion with idempotency (ON CONFLICT DO NOTHING)."""
 
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 

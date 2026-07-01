@@ -102,7 +102,7 @@ class TestAggregationAndTopK:
 
     @pytest.mark.asyncio
     async def test_aggregate_upsert_rerun(self, db_session):
-        """Re-running aggregation for the same window accumulates counts."""
+        """Re-running aggregation for the same window is idempotent (recompute-and-replace)."""
         from sqlalchemy import text
 
         from youtube_topk.models.video import Video
@@ -139,10 +139,11 @@ class TestAggregationAndTopK:
         results = await get_top_k(db_session, ws, we, k=10)
         assert results[0]["view_count"] == 2
 
-        # Rerun without new events — adds same count again (idempotent accumulation)
+        # Rerun without new events — full recompute REPLACES, so the count is unchanged
+        # (genuinely idempotent: f(f(x)) == f(x), not doubled).
         await aggregate_window(db_session, ws, we)
         results = await get_top_k(db_session, ws, we, k=10)
-        assert results[0]["view_count"] == 4
+        assert results[0]["view_count"] == 2
 
     @pytest.mark.asyncio
     async def test_empty_window(self, db_session):

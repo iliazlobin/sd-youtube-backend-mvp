@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest tests/unit/ -v
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: youtube_topk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Run migrations
+        run: DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/youtube_topk alembic upgrade head
+      - name: Start app
+        run: DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/youtube_topk uvicorn youtube_topk.main:app --host 0.0.0.0 --port 8000 &
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/healthz && break
+            sleep 1
+          done
+      - name: Acceptance tests
+        run: API_BASE_URL=http://localhost:8000 python -m pytest verify/acceptance/ -v

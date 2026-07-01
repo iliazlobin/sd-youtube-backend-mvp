@@ -3,17 +3,26 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from youtube_topk import db
 from youtube_topk.config import Settings
-from youtube_topk.db import close_db, init_db
 from youtube_topk.routers import events, health, topk, videos
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = Settings()
-    await init_db(settings)
+    await db.init_db(settings)
+
+    # Create tables for SQLite dev convenience; production uses Alembic
+    from youtube_topk.models import view_event  # noqa: F401
+    from youtube_topk.models import window_aggregate  # noqa: F401
+    from youtube_topk.models.video import Base
+
+    async with db._engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     yield
-    await close_db()
+    await db.close_db()
 
 
 def create_app() -> FastAPI:
