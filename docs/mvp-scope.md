@@ -1,37 +1,28 @@
-# YouTube — MVP Scope (the contract for what we build NOW)
+# YouTube Top-K MVP — Scope
 
-This file is the **contract**. The architect turns it into `design.md` + the executable
-`verify/acceptance/` suite; the verifier gates against the Acceptance Criteria below. Be concrete.
+Variant: **mvp** (core FRs only — smallest thing that works)
 
-## Stack
-> The lean stack for the MVP (language, framework, datastore, key libs). Prefer the smallest thing that
-> meets the functional requirements. Example: Python 3.11 · FastAPI · PostgreSQL · httpx · pytest · Docker Compose.
+## In scope
 
-## Scope
-**In (build now):**
-> - …
+- **FR1 — Top-K by time window.** Return top-K videos by view count for a given tumbling window (hour, day). `GET /v1/top-k?window=hour|day&k=50` returns a ranked list of {video_id, count, rank} with a `refreshed_at` timestamp.
+- **FR2 — Tumbling windows.** Support hour and day granularity. Views are aggregated into tumbling windows; queries read the most recent completed window.
+- **FR4 — Metadata.** Each response carries `{window, refreshed_at, k}` metadata.
+- **Event ingestion.** `POST /v1/events/view` accepts a single view event {video_id, viewer_id, event_time} and returns 202 Accepted. Batch endpoint `POST /v1/events/view/batch` accepts up to 500 events.
+- **Video registration.** `POST /v1/videos` and `GET /v1/videos/{id}` — simple CRUD for videos.
 
-**Out (later phases):**
-> - …
+## Out of scope
 
-## Functional Requirements
-> Number each requirement. Each becomes one executable black-box acceptance case (input → expected output).
-> Be specific about status codes, payloads, error cases, idempotency, and concurrency.
+- Sliding/trending windows (FR3 — real-time "hot right now")
+- Per-region and per-category top-K (FR5)
+- Full fault tolerance with Kafka + Flink (FR6 — MVP uses a simpler PostgreSQL-backed aggregation)
+- Space-Saving sketch (MVP uses exact counting via PostgreSQL)
+- Bot filtering
+- Redis caching layer (MVP serves directly from PostgreSQL)
+- Authentication / rate limiting
 
-- **FR-1** — …
-- **FR-2** — …
-- **FR-3** — …
+## MVP architecture (simplified from the design)
 
-## Acceptance Criteria
-> One per functional requirement, phrased as an assertion the verifier can EXECUTE against the running system.
-> These map 1:1 to files under `verify/acceptance/`.
-
-- **AC-1 (FR-1)** — `GET /… → 200` with `{…}`; unknown id → `404`.
-- **AC-2 (FR-2)** — …
-- **AC-3 (FR-3)** — …
-
-## Build Plan
-> The kanban dependency chain. The generic chain in KICKOFF.md (Option B) works as-is; refine it here if the
-> build needs domain-specific engineer cards. Pattern:
-> architect → senior/staff-engineer build cards → verifier GATE → sre (compose + verify/manifest.env) → writer,
-> then the owner turns on the host e2e loop.
+- **Ingestion:** FastAPI endpoints accept view events → write to PostgreSQL `view_events` table
+- **Aggregation:** PostgreSQL materialized view or scheduled aggregation (hourly `window_aggregates` table, populated by a background task / cron within the FastAPI app)
+- **Query:** `GET /v1/top-k` reads from `window_aggregates` with `ORDER BY view_count DESC LIMIT k`
+- **No Kafka, no Flink, no Redis** — the MVP uses the design's batch reconciliation path (PostgreSQL) as the primary path
