@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -23,7 +23,7 @@ async def video_id(db_session: AsyncSession) -> AsyncGenerator[uuid.UUID, None]:
 
 @pytest.fixture
 def now() -> datetime:
-    return datetime(2026, 6, 30, 12, 0, 0, tzinfo=timezone.utc)
+    return datetime(2026, 6, 30, 12, 0, 0, tzinfo=UTC)
 
 
 def _make_event(video_id: uuid.UUID, viewer_id: str, event_time: datetime) -> ViewEventRequest:
@@ -44,7 +44,9 @@ async def test_single_ingest(db_session: AsyncSession, video_id: uuid.UUID, now:
 
 
 @pytest.mark.asyncio
-async def test_idempotency_repost(db_session: AsyncSession, video_id: uuid.UUID, now: datetime) -> None:
+async def test_idempotency_repost(
+    db_session: AsyncSession, video_id: uuid.UUID, now: datetime
+) -> None:
     event = _make_event(video_id, "user1", now)
     c1 = await event_service.ingest_view_event(db_session, event)
     await db_session.flush()
@@ -63,7 +65,9 @@ async def test_batch_ingest(db_session: AsyncSession, video_id: uuid.UUID, now: 
 
 
 @pytest.mark.asyncio
-async def test_batch_mixed_dup_new(db_session: AsyncSession, video_id: uuid.UUID, now: datetime) -> None:
+async def test_batch_mixed_dup_new(
+    db_session: AsyncSession, video_id: uuid.UUID, now: datetime
+) -> None:
     new_events = [_make_event(video_id, f"user{i}", now) for i in range(5)]
     c1 = await event_service.ingest_view_events_batch(db_session, new_events)
     await db_session.flush()

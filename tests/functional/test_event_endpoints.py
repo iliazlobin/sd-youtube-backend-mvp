@@ -1,7 +1,6 @@
 """Functional tests for event endpoints."""
 
 import uuid
-from datetime import datetime, timezone
 
 import pytest
 from httpx import AsyncClient

@@ -1,6 +1,7 @@
 """Black-box acceptance tests — FR1: Top-K by window."""
 
 import os
+from datetime import UTC
 
 import pytest
 from httpx import AsyncClient
@@ -15,7 +16,7 @@ def api_base() -> str:
 async def test_fr1_topk_by_window_hour(api_base: str) -> None:
     """FR1: GET /v1/top-k?window=hour&k=10 returns ranked results with metadata."""
     import uuid
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     async with AsyncClient(base_url=api_base) as client:
         # Create a video
@@ -24,7 +25,7 @@ async def test_fr1_topk_by_window_hour(api_base: str) -> None:
         video_id = v_resp.json()["video_id"]
 
         # Ingest some view events
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         prev_hour = now.replace(minute=0, second=0, microsecond=0)
         event_time = prev_hour.replace(minute=30)  # 30 min into previous hour
 

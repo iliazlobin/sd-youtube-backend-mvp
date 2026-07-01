@@ -1,8 +1,5 @@
 """Functional tests for top-k endpoint."""
 
-import uuid
-from datetime import datetime, timezone
-
 import pytest
 from httpx import AsyncClient
 

@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from youtube_topk.models.video import Video
 from youtube_topk.models.view_event import ViewEvent
 from youtube_topk.models.window_aggregate import WindowAggregate
 
@@ -32,9 +31,7 @@ def compute_window_boundaries(
     return window_start, window_end
 
 
-async def aggregate_window(
-    db: AsyncSession, window_start: datetime, window_end: datetime
-) -> None:
+async def aggregate_window(db: AsyncSession, window_start: datetime, window_end: datetime) -> None:
     """Aggregate view events for a time window into window_aggregates.
 
     Uses UPSERT (ON CONFLICT DO UPDATE) so re-running is idempotent.
@@ -102,9 +99,7 @@ async def get_top_k(
     ]
 
 
-async def get_window_count(
-    db: AsyncSession, video_id: uuid.UUID, window_start: datetime
-) -> int:
+async def get_window_count(db: AsyncSession, video_id: uuid.UUID, window_start: datetime) -> int:
     """Return the view count for a single video in a window."""
     stmt = select(func.coalesce(func.sum(WindowAggregate.view_count), 0)).where(
         WindowAggregate.video_id == video_id,

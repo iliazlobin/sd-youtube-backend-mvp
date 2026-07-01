@@ -6,7 +6,10 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "53 2 * * *"
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,5 +38,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
+      - name: Run migrations
+        run: DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/youtube_topk alembic upgrade head
       - name: Run functional tests
         run: DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/youtube_topk python -m pytest tests/functional/ -v

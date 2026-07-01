@@ -3,7 +3,6 @@
 import uuid
 
 import pytest
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from youtube_topk.models.video import Video
@@ -68,8 +67,8 @@ async def test_window_aggregate_unique_constraint(db_session: AsyncSession) -> N
     db_session.add(video)
     await db_session.flush()
 
-    ws = datetime.datetime(2026, 6, 30, 12, 0, 0, tzinfo=datetime.timezone.utc)
-    we = datetime.datetime(2026, 6, 30, 13, 0, 0, tzinfo=datetime.timezone.utc)
+    ws = datetime.datetime(2026, 6, 30, 12, 0, 0, tzinfo=datetime.UTC)
+    we = datetime.datetime(2026, 6, 30, 13, 0, 0, tzinfo=datetime.UTC)
 
     agg1 = WindowAggregate(video_id=video.video_id, window_start=ws, window_end=we, view_count=5)
     db_session.add(agg1)

@@ -14,8 +14,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await db.init_db(settings)
 
     # Create tables for SQLite dev convenience; production uses Alembic
-    from youtube_topk.models import view_event  # noqa: F401
-    from youtube_topk.models import window_aggregate  # noqa: F401
+    from youtube_topk.models import (
+        view_event,  # noqa: F401
+        window_aggregate,  # noqa: F401
+    )
     from youtube_topk.models.video import Base
 
     async with db._engine.begin() as conn:

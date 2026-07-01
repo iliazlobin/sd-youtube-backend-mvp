@@ -1,10 +1,10 @@
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from youtube_topk.config import Settings
 from youtube_topk.models.video import Base
 from youtube_topk.models.view_event import ViewEvent  # noqa: F401

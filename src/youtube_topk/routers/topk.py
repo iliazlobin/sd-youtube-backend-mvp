@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,14 +19,14 @@ async def get_top_k(
 ) -> TopKResponse:
     try:
         window_start, window_end = agg_service.compute_window_boundaries(window)
-    except ValueError:
+    except ValueError as err:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid window: {window}. Must be 'hour' or 'day'.",
-        )
+        ) from err
 
     results = await agg_service.get_top_k(db, window_start, window_end, k)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     top_k_results = [
         TopKResult(
