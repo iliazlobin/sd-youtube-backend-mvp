@@ -1,19 +1,38 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Virtual environments
 .venv/
-.venv*/
 venv/
 env/
-verify/.venv/
+
+# Environment
 .env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
 .pytest_cache/
-.ruff_cache/
-.mypy_cache/
-build/
-dist/
-*.log
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
 *.rdb
 dump.rdb
-verify/logs/
-verify/state/
+
+# Alembic
+alembic/versions/__pycache__/
